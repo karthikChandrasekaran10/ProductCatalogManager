@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Create Product</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 40px;
+      background-color: #f9f9f9;
+      text-align: center;
+    }
+
+    form {
+      display: inline-block;
+      text-align: left;
+      background-color: white;
+      padding: 20px;
+      border-radius: 10px;
+      border: 1px solid #ccc;
+    }
+
+    label {
+      display: block;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+
+    input[type="text"], select {
+      width: 300px;
+      padding: 8px;
+      margin-top: 5px;
+      font-size: 15px;
+    }
+
+    .attribute-field {
+      margin-top: 15px;
+      background-color: #f2f2f2;
+      padding: 10px;
+      border-radius: 6px;
+    }
+
+    button {
+      margin-top: 20px;
+      padding: 10px 25px;
+      font-size: 16px;
+      background-color: #28a745;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #218838;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Create Product</h2>
+
+  <form id="createProductForm">
+    <label for="productName">Product Name</label>
+    <input type="text" id="productName" name="productName" required>
+
+    <label for="category">Select Category</label>
+    <select id="category" name="category" onchange="loadAttributes()" required>
+      <option value="">-- Choose Category --</option>
+    </select>
+
+    <div id="attributeFieldsContainer"></div>
+
+    <button type="submit">Create Product</button>
+  </form>
+
+  <script>
+    // Simulated categories & attributes from DB
+    const categoryData = {
+      "Smartphones": [
+        { name: "OS", datatype: "string", mandatory: true },
+        { name: "RAM", datatype: "number", mandatory: true },
+        { name: "Battery Size", datatype: "number", mandatory: false }
+      ],
+      "Watches": [
+        { name: "Dial Color", datatype: "string", mandatory: true },
+        { name: "Dial Size", datatype: "decimal", mandatory: false },
+        { name: "Strap Type", datatype: "string", mandatory: true }
+      ]
+    };
+
+    // Populate category dropdown
+    const categorySelect = document.getElementById("category");
+    Object.keys(categoryData).forEach(cat => {
+      const option = document.createElement("option");
+      option.value = cat;
+      option.textContent = cat;
+      categorySelect.appendChild(option);
+    });
+
+    // Render attribute fields dynamically
+    function loadAttributes() {
+      const selectedCategory = categorySelect.value;
+      const container = document.getElementById("attributeFieldsContainer");
+      container.innerHTML = "";
+
+      if (!selectedCategory) return;
+
+      const attributes = categoryData[selectedCategory];
+
+      attributes.forEach(attr => {
+        const field = document.createElement("div");
+        field.className = "attribute-field";
+
+        let inputElement;
+        switch (attr.datatype) {
+          case "number":
+          case "decimal":
+            inputElement = `<input type="number" name="${attr.name}" ${attr.mandatory ? "required" : ""}>`;
+            break;
+          case "boolean":
+            inputElement = `
+              <select name="${attr.name}" ${attr.mandatory ? "required" : ""}>
+                <option value="">-- Select --</option>
+                <option value="true">True</option>
+                <option value="false">False</option>
+              </select>`;
+            break;
+          case "date":
+            inputElement = `<input type="date" name="${attr.name}" ${attr.mandatory ? "required" : ""}>`;
+            break;
+          default:
+            inputElement = `<input type="text" name="${attr.name}" ${attr.mandatory ? "required" : ""}>`;
+        }
+
+        field.innerHTML = `
+          <label>${attr.name} ${attr.mandatory ? "*" : ""}</label>
+          ${inputElement}
+        `;
+        container.appendChild(field);
+      });
+    }
+  </script>
+
+</body>
+</html>

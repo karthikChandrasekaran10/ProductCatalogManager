@@ -1,0 +1,142 @@
+package com.catalog.product_catalog.service;
+
+import com.catalog.product_catalog.dto.CategoryDTO;
+import com.catalog.product_catalog.dto.AttributeDTO;
+import com.catalog.product_catalog.entity.Category;
+import com.catalog.product_catalog.entity.Attribute;
+import com.catalog.product_catalog.repository.CategoryRepository;
+import com.catalog.product_catalog.repository.AttributeRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+public class CategoryService {
+
+    @Autowired
+    private CategoryRepository categoryRepository;
+
+    @Autowired
+    private AttributeRepository attributeRepository;
+
+    // Convert Category entity to CategoryDTO
+    private CategoryDTO convertToDTO(Category category) {
+        List<AttributeDTO> attributeDTOs = category.getAttributes().stream()
+                .map(attribute -> new AttributeDTO(
+                        attribute.getId(),
+                        attribute.getName(),
+                        attribute.getDescription(),
+                        category.getId(),
+                        attribute.getDataType(),
+                        attribute.isMandatory()
+                ))
+                .collect(Collectors.toList());
+
+        return new CategoryDTO(
+                category.getId(),
+                category.getName(),
+                category.getDescription(),
+                attributeDTOs
+        );
+    }
+
+    // Convert CategoryDTO to Category entity
+//    private Category convertToEntity(CategoryDTO categoryDTO) {
+//        return new Category();
+//    }
+    private Category convertToEntity(CategoryDTO categoryDTO) {
+        Category category = new Category();
+        category.setName(categoryDTO.getName());
+        category.setDescription(categoryDTO.getDescription());
+        return category;
+    }
+
+    // Create a new category with attributes
+    public CategoryDTO createCategory(CategoryDTO categoryDTO) {
+        // Create a new Category
+        Category category = convertToEntity(categoryDTO);
+
+        // Save the category
+        category = categoryRepository.save(category);
+
+        // Save associated attributes
+        if (categoryDTO.getAttributes() != null) {
+            for (AttributeDTO attributeDTO : categoryDTO.getAttributes()) {
+                Attribute attribute = new Attribute();
+                attribute.setName(attributeDTO.getName());
+                attribute.setDescription(attributeDTO.getDescription());
+                attribute.setCategory(category);
+                attributeRepository.save(attribute);
+            }
+        }
+
+        // Return the saved CategoryDTO
+        return convertToDTO(category);
+    }
+
+    // Get all categories
+    public List<CategoryDTO> getAllCategories() {
+        List<Category> categories = categoryRepository.findAll();
+        return categories.stream().map(this::convertToDTO).collect(Collectors.toList());
+    }
+
+    // Get a category by id
+    public CategoryDTO getCategoryById(Long id) {
+        Category category = categoryRepository.findById(id).orElse(null);
+        return category != null ? convertToDTO(category) : null;
+    }
+
+    // Update a category and manage its attributes
+    public CategoryDTO updateCategory(Long id, CategoryDTO categoryDTO) {
+        if (categoryRepository.existsById(id)) {
+            Category category = convertToEntity(categoryDTO);
+            category.setId(id); // Ensure we update the correct category
+
+            // Update the category
+            Category updatedCategory = categoryRepository.save(category);
+
+            // Delete old attributes (if they no longer exist in the updated DTO)
+            List<Attribute> existingAttributes = attributeRepository.findByCategoryId(id);
+            for (Attribute existingAttribute : existingAttributes) {
+                if (!categoryDTO.getAttributes().stream().anyMatch(dto -> dto.getId().equals(existingAttribute.getId()))) {
+                    attributeRepository.delete(existingAttribute);
+                }
+            }
+
+            // Add or update attributes
+            for (AttributeDTO attributeDTO : categoryDTO.getAttributes()) {
+                Attribute attribute;
+                if (attributeDTO.getId() == null) {
+                    // New attribute, create it
+                    attribute = new Attribute();
+                } else {
+                    // Existing attribute, update it
+                    attribute = attributeRepository.findById(attributeDTO.getId()).orElse(new Attribute());
+                }
+                attribute.setName(attributeDTO.getName());
+                attribute.setDescription(attributeDTO.getDescription());
+                attribute.setCategory(updatedCategory);
+                attributeRepository.save(attribute);
+            }
+
+            return convertToDTO(updatedCategory);
+        }
+        return null; // Category not found
+    }
+
+    // Delete a category and its attributes
+    public boolean deleteCategory(Long id) {
+        if (categoryRepository.existsById(id)) {
+            // Delete the associated attributes first
+            List<Attribute> attributes = attributeRepository.findByCategoryId(id);
+            attributeRepository.deleteAll(attributes);
+
+            // Delete the category
+            categoryRepository.deleteById(id);
+            return true;
+        }
+        return false;
+    }
+}

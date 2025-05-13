@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Internal Product Catalog Management Tool</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 60px;
+      background-color: #f2f2f2;
+      text-align: center;
+    }
+
+    h1 {
+      margin-bottom: 40px;
+    }
+
+    .section {
+      margin-bottom: 50px;
+    }
+
+    button {
+      display: block;
+      width: 240px;
+      margin: 10px auto;
+      padding: 15px;
+      font-size: 16px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    .category-section button {
+      background-color: #28a745;
+    }
+
+    .category-section button:hover {
+      background-color: #1e7e34;
+    }
+
+    .product-section button {
+      background-color: #17a2b8;
+    }
+
+    .product-section button:hover {
+      background-color: #117a8b;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Internal Product Catalog Management Tool</h1>
+
+  <div class="section category-section">
+    <h2>Category Management</h2>
+    <button onclick="location.href='category/create-category.html'">Create Category</button>
+    <button onclick="location.href='category/manage-categories.html'">Manage Categories</button>
+  </div>
+
+  <div class="section product-section">
+    <h2>Product Management</h2>
+    <button onclick="location.href='product/create-product.html'">Create Product</button>
+    <button onclick="location.href='product/manage-product.html'">Manage Products</button>
+  </div>
+
+</body>
+</html>
