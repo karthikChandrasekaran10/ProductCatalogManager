@@ -1,212 +1,195 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
   <title>Edit Category</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      padding: 40px;
-      background-color: #f9f9f9;
-    }
-
-    h2 {
-      text-align: center;
-      margin-bottom: 30px;
+      margin: 40px;
+      background-color: #f8f9fa;
     }
 
     form {
+      background-color: #fff;
+      padding: 25px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
       max-width: 600px;
-      margin: auto;
-      padding: 20px;
-      background-color: white;
-      border-radius: 10px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     }
 
     label {
       display: block;
-      margin: 10px 0 5px;
+      margin-bottom: 8px;
       font-weight: bold;
+      color: #333;
     }
 
-    input[type="text"], textarea {
+    input[type="text"], select {
       width: 100%;
-      padding: 10px;
+      padding: 8px;
       margin-bottom: 15px;
-      border-radius: 5px;
       border: 1px solid #ccc;
+      border-radius: 4px;
     }
 
-    button {
-      padding: 10px 20px;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      font-size: 16px;
+    .attribute-group {
+      border: 1px solid #dee2e6;
+      padding: 15px;
+      border-radius: 6px;
+      background-color: #f1f3f5;
+      margin-bottom: 15px;
     }
 
-    .save-btn {
+    .update-btn {
       background-color: #28a745;
       color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 4px;
+      cursor: pointer;
     }
 
-    .cancel-btn {
-      background-color: #ffc107;
-      color: white;
+    .update-btn:hover {
+      background-color: #218838;
     }
 
     .delete-btn {
       background-color: #dc3545;
       color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-left: 10px;
     }
 
-    .btn-group {
-      display: flex;
-      justify-content: space-between;
+    .delete-btn:hover {
+      background-color: #c82333;
     }
-
-    .btn-group button {
-      width: 32%;
-    }
-
   </style>
 </head>
 <body>
-
   <h2>Edit Category</h2>
-
   <form id="editCategoryForm">
-    <label for="categoryName">Category Name</label>
-    <input type="text" id="categoryName" name="categoryName" required>
+    <input type="hidden" id="categoryId">
+    <label>Name:
+      <input type="text" id="name" required>
+    </label>
 
-    <label for="categoryDescription">Category Description</label>
-    <textarea id="categoryDescription" name="categoryDescription" required></textarea>
+    <label>Description:
+      <input type="text" id="description" required>
+    </label>
 
-    <div id="attributeContainer">
-      <!-- Attribute Fields Will Be Loaded Here -->
-    </div>
+    <div id="attributesContainer"></div>
 
-    <div class="btn-group">
-      <button type="button" class="save-btn" onclick="saveCategory()">Save</button>
-      <button type="button" class="cancel-btn" onclick="cancelEdit()">Cancel</button>
-      <button type="button" class="delete-btn" onclick="deleteCategory()">Delete</button>
-    </div>
+    <button type="submit" class="update-btn">Update Category</button>
+    <button type="button" class="delete-btn" id="deleteCategoryBtn">Delete Category</button>
   </form>
 
   <script>
-    let categoryId = new URLSearchParams(window.location.search).get("categoryId");
+    const urlParams = new URLSearchParams(window.location.search);
+    const categoryId = urlParams.get('categoryId');
 
-    async function fetchCategoryDetails() {
+    async function fetchCategory(id) {
       try {
-        const response = await fetch(`http://localhost:8080/api/categories/${categoryId}`);
-        const category = await response.json();
-
-        // Populate category form
-        document.getElementById('categoryName').value = category.name;
-        document.getElementById('categoryDescription').value = category.description;
-
-        // Populate attributes (assuming attributes are part of the category response)
-        const attributeContainer = document.getElementById('attributeContainer');
-        category.attributes.forEach(attribute => {
-          const attributeDiv = document.createElement('div');
-          attributeDiv.classList.add('attribute-group');
-          attributeDiv.innerHTML = `
-            <label for="attributeName">Attribute Name</label>
-            <input type="text" value="${attribute.name}" name="attributeName" required>
-
-            <label for="attributeDescription">Description</label>
-            <input type="text" value="${attribute.description}" name="attributeDescription" required>
-
-            <label for="attributeDatatype">Data Type</label>
-            <select name="attributeDatatype" required>
-              <option value="string" ${attribute.datatype === 'string' ? 'selected' : ''}>String</option>
-              <option value="number" ${attribute.datatype === 'number' ? 'selected' : ''}>Number</option>
-              <option value="boolean" ${attribute.datatype === 'boolean' ? 'selected' : ''}>Boolean</option>
-              <option value="date" ${attribute.datatype === 'date' ? 'selected' : ''}>Date</option>
-              <option value="list" ${attribute.datatype === 'list' ? 'selected' : ''}>List</option>
-              <option value="decimal" ${attribute.datatype === 'decimal' ? 'selected' : ''}>Decimal</option>
-            </select>
-
-            <label for="attributeMandatory">Mandatory</label>
-            <select name="attributeMandatory" required>
-              <option value="YES" ${attribute.mandatory === 'YES' ? 'selected' : ''}>Yes</option>
-              <option value="NO" ${attribute.mandatory === 'NO' ? 'selected' : ''}>No</option>
-            </select>
-          `;
-          attributeContainer.appendChild(attributeDiv);
-        });
+        const res = await fetch(`http://localhost:8080/api/categories/${id}`);
+        if (!res.ok) throw new Error('Failed to fetch category');
+        const data = await res.json();
+        populateForm(data);
       } catch (error) {
-        console.error("Error fetching category:", error);
-        alert("Failed to load category details.");
+        alert('Error loading category: ' + error.message);
       }
     }
 
-    function saveCategory() {
-      const updatedCategory = {
-        id: categoryId,
-        name: document.getElementById('categoryName').value,
-        description: document.getElementById('categoryDescription').value,
-        attributes: []
-      };
+    function populateForm(category) {
+      document.getElementById('categoryId').value = category.id;
+      document.getElementById('name').value = category.name;
+      document.getElementById('description').value = category.description;
 
-      const attributeDivs = document.querySelectorAll('.attribute-group');
-      attributeDivs.forEach(attributeDiv => {
-        const attribute = {
-          name: attributeDiv.querySelector('[name="attributeName"]').value,
-          description: attributeDiv.querySelector('[name="attributeDescription"]').value,
-          datatype: attributeDiv.querySelector('[name="attributeDatatype"]').value,
-          mandatory: attributeDiv.querySelector('[name="attributeMandatory"]').value
-        };
-        updatedCategory.attributes.push(attribute);
+      const container = document.getElementById('attributesContainer');
+      container.innerHTML = '';
+
+      category.attributes.forEach(attr => {
+        const group = document.createElement('div');
+        group.className = 'attribute-group';
+        group.innerHTML = `
+          <input type="hidden" name="attrId" value="${attr.id}">
+          <label>Attribute Name:
+            <input type="text" name="attrName" value="${attr.name}" required>
+          </label>
+          <label>Description:
+            <input type="text" name="attrDesc" value="${attr.description}" required>
+          </label>
+          <label>Data Type:
+            <select name="attrType">
+              <option value="STRING" ${attr.dataType === 'STRING' ? 'selected' : ''}>STRING</option>
+              <option value="NUMBER" ${attr.dataType === 'NUMBER' ? 'selected' : ''}>NUMBER</option>
+              <option value="BOOLEAN" ${attr.dataType === 'BOOLEAN' ? 'selected' : ''}>BOOLEAN</option>
+              <option value="DATE" ${attr.dataType === 'DATE' ? 'selected' : ''}>DATE</option>
+            </select>
+          </label>
+          <label>Mandatory:
+            <select name="attrMandatory">
+              <option value="true" ${attr.mandatory ? 'selected' : ''}>Yes</option>
+              <option value="false" ${!attr.mandatory ? 'selected' : ''}>No</option>
+            </select>
+          </label>
+        `;
+        container.appendChild(group);
       });
+    }
 
-      // Save updated category to the server
-      fetch(`http://localhost:8080/api/categories/${categoryId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(updatedCategory)
-      })
-        .then(response => response.json())
-        .then(data => {
-          alert("Category updated successfully!");
-          window.location.href = "manage-categories.html"; // Redirect back to the categories list
-        })
-        .catch(error => {
-          console.error("Error updating category:", error);
-          alert("Failed to update category.");
+    document.getElementById('editCategoryForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+
+      const id = parseInt(document.getElementById('categoryId').value);
+      const name = document.getElementById('name').value;
+      const description = document.getElementById('description').value;
+
+      const attributeElements = document.querySelectorAll('.attribute-group');
+      const attributes = Array.from(attributeElements).map(group => ({
+        id: parseInt(group.querySelector('input[name="attrId"]').value),
+        name: group.querySelector('input[name="attrName"]').value,
+        description: group.querySelector('input[name="attrDesc"]').value,
+        dataType: group.querySelector('select[name="attrType"]').value,
+        mandatory: group.querySelector('select[name="attrMandatory"]').value === 'true',
+        categoryId: id
+      }));
+
+      const payload = { id, name, description, attributes };
+
+      try {
+        const res = await fetch(`http://localhost:8080/api/categories/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
         });
-    }
-
-    function cancelEdit() {
-      if (confirm("Are you sure you want to cancel the changes?")) {
-        window.location.href = "manage-categories.html"; // Redirect back to the categories list
+        if (!res.ok) throw new Error(await res.text());
+        alert('Category updated successfully!');
+      } catch (error) {
+        alert('Error updating category: ' + error.message);
       }
-    }
+    });
 
-    function deleteCategory() {
-      if (confirm("Are you sure you want to delete this category? This action cannot be undone.")) {
-        fetch(`http://localhost:8080/api/categories/${categoryId}`, {
+    document.getElementById('deleteCategoryBtn').addEventListener('click', async () => {
+      const id = parseInt(document.getElementById('categoryId').value);
+      const confirmed = confirm("Are you sure you want to delete this category and all its attributes?");
+      if (!confirmed) return;
+
+      try {
+        const res = await fetch(`http://localhost:8080/api/categories/${id}`, {
           method: 'DELETE'
-        })
-          .then(response => response.json())
-          .then(data => {
-            alert("Category deleted successfully!");
-            window.location.href = "manage-categories.html"; // Redirect back to the categories list
-          })
-          .catch(error => {
-            console.error("Error deleting category:", error);
-            alert("Failed to delete category.");
-          });
+        });
+        if (!res.ok) throw new Error(await res.text());
+        alert("Category deleted successfully!");
+        window.location.href = "manage-categories.html";; // Change to your target page
+      } catch (error) {
+        alert("Error deleting category: " + error.message);
       }
-    }
+    });
 
-    // Load category details when page is ready
-    window.onload = fetchCategoryDetails;
+    fetchCategory(categoryId);
   </script>
-
 </body>
 </html>

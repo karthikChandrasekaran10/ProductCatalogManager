@@ -11,6 +11,8 @@ public class ProductAttributeValueDTO {
     private Long id;
     private Long productId;  // ID of the product (not Product object)
     private Long attributeId;  // ID of the attribute
+    private String attributeName;
     private String value;
+    private String datatype;
 
 }

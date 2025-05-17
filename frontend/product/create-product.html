@@ -25,7 +25,7 @@
       font-weight: bold;
     }
 
-    input[type="text"], select {
+    input[type="text"], input[type="number"], input[type="date"], select, textarea {
       width: 300px;
       padding: 8px;
       margin-top: 5px;
@@ -63,6 +63,9 @@
     <label for="productName">Product Name</label>
     <input type="text" id="productName" name="productName" required>
 
+    <label for="productDescription">Product Description</label>
+    <textarea id="productDescription" name="productDescription" rows="3" required></textarea>
+
     <label for="category">Select Category</label>
     <select id="category" name="category" onchange="loadAttributes()" required>
       <option value="">-- Choose Category --</option>
@@ -74,50 +77,47 @@
   </form>
 
   <script>
-    // Simulated categories & attributes from DB
-    const categoryData = {
-      "Smartphones": [
-        { name: "OS", datatype: "string", mandatory: true },
-        { name: "RAM", datatype: "number", mandatory: true },
-        { name: "Battery Size", datatype: "number", mandatory: false }
-      ],
-      "Watches": [
-        { name: "Dial Color", datatype: "string", mandatory: true },
-        { name: "Dial Size", datatype: "decimal", mandatory: false },
-        { name: "Strap Type", datatype: "string", mandatory: true }
-      ]
-    };
+    let categoryMap = new Map();
 
-    // Populate category dropdown
-    const categorySelect = document.getElementById("category");
-    Object.keys(categoryData).forEach(cat => {
-      const option = document.createElement("option");
-      option.value = cat;
-      option.textContent = cat;
-      categorySelect.appendChild(option);
-    });
+    async function fetchCategories() {
+      try {
+        const res = await fetch("http://localhost:8080/api/categories");
+        const data = await res.json();
 
-    // Render attribute fields dynamically
+        const categorySelect = document.getElementById("category");
+        data.forEach(category => {
+          categoryMap.set(category.id, category);
+          const option = document.createElement("option");
+          option.value = category.id;
+          option.textContent = category.name;
+          categorySelect.appendChild(option);
+        });
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+        alert("Failed to load categories.");
+      }
+    }
+
     function loadAttributes() {
-      const selectedCategory = categorySelect.value;
+      const selectedId = document.getElementById("category").value;
       const container = document.getElementById("attributeFieldsContainer");
       container.innerHTML = "";
 
-      if (!selectedCategory) return;
+      if (!selectedId) return;
 
-      const attributes = categoryData[selectedCategory];
+      const category = categoryMap.get(parseInt(selectedId));
+      if (!category || !category.attributes) return;
 
-      attributes.forEach(attr => {
+      category.attributes.forEach(attr => {
         const field = document.createElement("div");
         field.className = "attribute-field";
 
         let inputElement;
-        switch (attr.datatype) {
-          case "number":
-          case "decimal":
+        switch (attr.dataType) {
+          case "NUMBER":
             inputElement = `<input type="number" name="${attr.name}" ${attr.mandatory ? "required" : ""}>`;
             break;
-          case "boolean":
+          case "BOOLEAN":
             inputElement = `
               <select name="${attr.name}" ${attr.mandatory ? "required" : ""}>
                 <option value="">-- Select --</option>
@@ -125,7 +125,7 @@
                 <option value="false">False</option>
               </select>`;
             break;
-          case "date":
+          case "DATE":
             inputElement = `<input type="date" name="${attr.name}" ${attr.mandatory ? "required" : ""}>`;
             break;
           default:
@@ -139,6 +139,60 @@
         container.appendChild(field);
       });
     }
+
+    document.getElementById("createProductForm").addEventListener("submit", async function (e) {
+      e.preventDefault();
+
+      const productName = document.getElementById("productName").value;
+      const productDescription = document.getElementById("productDescription").value;
+      const categoryId = document.getElementById("category").value;
+      const form = e.target;
+
+      const attributeValues = [];
+      const category = categoryMap.get(parseInt(categoryId));
+
+      category.attributes.forEach(attr => {
+        const input = form.querySelector(`[name="${attr.name}"]`);
+        if (input) {
+          attributeValues.push({
+            attributeId: attr.id,
+            value: input.value
+          });
+        }
+      });
+
+      const productPayload = {
+        name: productName,
+        description: productDescription,
+        categoryId: parseInt(categoryId),
+        attributeValues: attributeValues // ✅ Correct key
+      };
+
+      console.log("Payload being sent:", JSON.stringify(productPayload, null, 2)); // Debug log
+
+      try {
+        const res = await fetch("http://localhost:8080/api/products", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(productPayload)
+        });
+
+        if (res.ok) {
+          alert("Product created successfully!");
+          form.reset();
+          document.getElementById("attributeFieldsContainer").innerHTML = "";
+        } else {
+          alert("Failed to create product.");
+        }
+      } catch (error) {
+        console.error("Error creating product:", error);
+        alert("Error occurred while creating product.");
+      }
+    });
+
+    fetchCategories();
   </script>
 
 </body>

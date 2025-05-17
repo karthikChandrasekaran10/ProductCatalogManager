@@ -1,6 +1,8 @@
 package com.catalog.product_catalog.service;
 
+import com.catalog.product_catalog.dto.ProductAttributeValueDTO;
 import com.catalog.product_catalog.dto.ProductDTO;
+import com.catalog.product_catalog.dto.ProductWithAttributesDTO;
 import com.catalog.product_catalog.entity.Product;
 import com.catalog.product_catalog.entity.Category;
 import com.catalog.product_catalog.repository.ProductRepository;
@@ -12,14 +14,23 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+
 @Service
 public class ProductService {
 
-    @Autowired
-    private ProductRepository productRepository;
+    private final ProductRepository productRepository;
+    private final ProductAttributeValueService pavService;
+    private final CategoryRepository categoryRepository;
 
-    @Autowired
-    private CategoryRepository categoryRepository;
+    public ProductService(ProductRepository productRepository,
+                          ProductAttributeValueService pavService,
+                          CategoryRepository categoryRepository) {
+        this.productRepository = productRepository;
+        this.pavService = pavService;
+        this.categoryRepository = categoryRepository;
+    }
+
+
 
     // Convert Product entity to ProductDTO
     private ProductDTO convertToDTO(Product product) {
@@ -90,4 +101,30 @@ public class ProductService {
         }
         return false;
     }
+    public ProductWithAttributesDTO getProductWithAttributesById(Long id) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Product not found"));
+
+        ProductWithAttributesDTO dto = new ProductWithAttributesDTO();
+        dto.setId(product.getId());
+        dto.setName(product.getName());
+        dto.setDescription(product.getDescription());
+        dto.setCategoryId(product.getCategory().getId());
+
+        List<ProductAttributeValueDTO> attrDTOs = product.getAttributeValues().stream().map(attrVal -> {
+            ProductAttributeValueDTO attrDTO = new ProductAttributeValueDTO();
+            attrDTO.setId(attrVal.getId());
+            attrDTO.setAttributeId(attrVal.getAttribute().getId());
+            attrDTO.setAttributeName(attrVal.getAttribute().getName());
+            attrDTO.setDatatype(attrVal.getAttribute().getDataType().name()); // e.g. STRING, NUMBER
+            attrDTO.setValue(attrVal.getValue());
+            return attrDTO;
+        }).collect(Collectors.toList());
+
+        dto.setAttributeValues(attrDTOs);
+        return dto;
+    }
+
+
+
 }
