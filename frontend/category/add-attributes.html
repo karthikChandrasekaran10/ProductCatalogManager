@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Add Attribute</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      background-color: #f8f9fa;
+    }
+
+    h2 {
+      color: #343a40;
+    }
+
+    form {
+      background-color: #fff;
+      padding: 25px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      max-width: 600px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 12px;
+      font-weight: bold;
+      color: #555;
+    }
+
+    input[type="text"],
+    select {
+      width: 100%;
+      padding: 8px;
+      margin-top: 4px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      margin-bottom: 15px;
+    }
+
+    .submit-btn {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      padding: 10px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .submit-btn:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <h2>Add Attribute</h2>
+  <form id="attributeForm">
+    <label for="category">Select Category:
+      <select id="category" required></select>
+    </label>
+
+    <label for="name">Attribute Name:
+      <input type="text" id="name" required>
+    </label>
+
+    <label for="description">Description:
+      <input type="text" id="description" required>
+    </label>
+
+    <label for="dataType">Data Type:
+      <select id="dataType" required>
+        <option value="STRING">STRING</option>
+        <option value="NUMBER">NUMBER</option>
+        <option value="BOOLEAN">BOOLEAN</option>
+        <option value="DATE">DATE</option>
+      </select>
+    </label>
+
+    <label for="mandatory">Mandatory:
+      <select id="mandatory" required>
+        <option value="true">Yes</option>
+        <option value="false">No</option>
+      </select>
+    </label>
+
+    <button type="submit" class="submit-btn">Add Attribute</button>
+  </form>
+
+  <script>
+    // Populate category dropdown on page load
+    window.onload = () => {
+      fetch('http://localhost:8080/api/categories')
+        .then(res => res.json())
+        .then(categories => {
+          const categorySelect = document.getElementById('category');
+          categories.forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat.id;
+            option.textContent = cat.name;
+            categorySelect.appendChild(option);
+          });
+        })
+        .catch(err => alert("Failed to load categories: " + err));
+    };
+
+    document.getElementById('attributeForm').addEventListener('submit', function (e) {
+      e.preventDefault();
+
+      const payload = {
+        categoryId: document.getElementById('category').value,
+        name: document.getElementById('name').value,
+        description: document.getElementById('description').value,
+        dataType: document.getElementById('dataType').value,
+        mandatory: document.getElementById('mandatory').value === 'true'
+      };
+
+      fetch('http://localhost:8080/api/attributes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      .then(res => {
+        if (res.ok) {
+          alert('Attribute Added!');
+          document.getElementById('attributeForm').reset(); // Reset form after success
+        } else {
+          return res.text().then(text => { throw new Error(text); });
+        }
+      })
+      .catch(err => alert('Error: ' + err.message));
+    });
+  </script>
+</body>
+</html>

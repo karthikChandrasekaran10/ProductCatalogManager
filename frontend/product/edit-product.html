@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Edit Product</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 40px;
+      background-color: #f8f9fa;
+    }
+    form {
+      background-color: #fff;
+      padding: 25px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      max-width: 700px;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: bold;
+      color: #333;
+    }
+    input[type="text"], select {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    .attribute-group {
+      border: 1px solid #dee2e6;
+      padding: 15px;
+      border-radius: 6px;
+      background-color: #f1f3f5;
+      margin-bottom: 15px;
+    }
+    .btn {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-right: 10px;
+    }
+    .update-btn {
+      background-color: #28a745;
+      color: white;
+    }
+    .update-btn:hover {
+      background-color: #218838;
+    }
+    .delete-btn {
+      background-color: #dc3545;
+      color: white;
+    }
+    .delete-btn:hover {
+      background-color: #c82333;
+    }
+  </style>
+</head>
+<body>
+  <h2>Edit Product</h2>
+  <form id="editProductForm">
+    <input type="hidden" id="productId" />
+
+    <label for="name">Name:</label>
+    <input type="text" id="name" required />
+
+    <label for="description">Description:</label>
+    <input type="text" id="description" required />
+
+    <label for="category">Category:</label>
+    <select id="category" required></select>
+
+    <div id="attributesContainer"></div>
+
+    <button type="submit" class="btn update-btn">Update Product</button>
+    <button type="button" class="btn delete-btn" id="deleteBtn">Delete Product</button>
+  </form>
+
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const productId = urlParams.get('productId');
+
+    async function fetchCategories() {
+      const res = await fetch('http://localhost:8080/api/categories');
+      if (!res.ok) throw new Error('Failed to fetch categories');
+      return await res.json();
+    }
+
+    async function fetchProduct(id) {
+      const res = await fetch(`http://localhost:8080/api/products/${id}`);
+      if (!res.ok) throw new Error('Failed to fetch product');
+      return await res.json();
+    }
+
+    function createAttributeGroup(attrVal) {
+      const group = document.createElement('div');
+      group.className = 'attribute-group';
+      group.innerHTML = `
+        <input type="hidden" name="attrValueId" value="${attrVal.id || ''}">
+        <input type="hidden" name="attributeId" value="${attrVal.attributeId}">
+        <label>${attrVal.attributeName} (${attrVal.datatype}):
+          <input type="text" name="attrValue" value="${attrVal.value || ''}" required />
+        </label>
+      `;
+      return group;
+    }
+
+    function populateForm(product, categories) {
+      document.getElementById('productId').value = product.id;
+      document.getElementById('name').value = product.name;
+      document.getElementById('description').value = product.description;
+
+      // Populate category dropdown
+      const categorySelect = document.getElementById('category');
+      categorySelect.innerHTML = '';
+      categories.forEach(cat => {
+        const option = document.createElement('option');
+        option.value = cat.id;
+        option.textContent = cat.name;
+        if (cat.id === product.categoryId) option.selected = true;
+        categorySelect.appendChild(option);
+      });
+
+      // Populate attributes
+      const container = document.getElementById('attributesContainer');
+      container.innerHTML = '';
+      if (product.attributeValues && product.attributeValues.length > 0) {
+        product.attributeValues.forEach(attrVal => {
+          container.appendChild(createAttributeGroup(attrVal));
+        });
+      }
+    }
+
+    document.getElementById('editProductForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+
+      const id = parseInt(document.getElementById('productId').value);
+      const name = document.getElementById('name').value;
+      const description = document.getElementById('description').value;
+      const categoryId = parseInt(document.getElementById('category').value);
+
+      const attributeElements = document.querySelectorAll('.attribute-group');
+      const attributes = Array.from(attributeElements).map(group => ({
+        id: parseInt(group.querySelector('input[name="attrValueId"]').value),
+        attributeId: parseInt(group.querySelector('input[name="attributeId"]').value),
+        value: group.querySelector('input[name="attrValue"]').value,
+        productId: id
+      }));
+
+      const payload = {
+        id,
+        name,
+        description,
+        categoryId,
+        attributeValues: attributes
+      };
+
+      try {
+        const res = await fetch(`http://localhost:8080/api/products/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error(await res.text());
+        alert('Product updated successfully!');
+      } catch (error) {
+        alert('Error updating product: ' + error.message);
+      }
+    });
+
+    document.getElementById('deleteBtn').addEventListener('click', async () => {
+      if (!confirm('Are you sure you want to delete this product?')) return;
+
+      try {
+        const res = await fetch(`http://localhost:8080/api/products/${productId}`, {
+          method: 'DELETE'
+        });
+        if (!res.ok) throw new Error(await res.text());
+        alert('Product deleted successfully!');
+        window.location.href = 'manage-product.html';
+      } catch (error) {
+        alert('Error deleting product: ' + error.message);
+      }
+    });
+
+    window.onload = async () => {
+      try {
+        const [categories, product] = await Promise.all([
+          fetchCategories(),
+          fetchProduct(productId)
+        ]);
+        populateForm(product, categories);
+      } catch (error) {
+        alert('Error loading product or categories: ' + error.message);
+      }
+    };
+  </script>
+</body>
+</html>
